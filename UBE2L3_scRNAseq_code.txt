@@ -1,7 +1,4 @@
-# Main Project-3 need to finish in a week.
-# scRNAseq revealed the Immune cell (signature scores) enriched with good prognosis in ER positive male breast cancer patients
-# Immune Hot and Immune Cold environment in MBC and FBC bulk data samples
-
+# scRNAseq revealed the Immune cell (signature scores) enriched with good prognosis in ER positive female breast cancer patients rather than males
 rm(list = ls())
 library(Seurat)
 library(Matrix)
@@ -14,12 +11,10 @@ library(knitr)
 library(tidyr)
 library(Cairo)
 # STEP-1 Integration of the datasets and samples
-base_path <- "/mount/ictr1/chenglab/venu/Manabu_project/scRNAseq/Smyth_GSE161529/"
+base_path <- "Smyth_GSE161529/"
 features_path <- paste0(base_path, "GSE161529_features.tsv")
-
 features <- read.delim(features_path, header = FALSE)
 features$V2 <- make.unique(features$V2)
-
 load_seurat_object <- function(sample_name) {
   matrix_path <- paste0(base_path, sample_name, "-matrix.mtx.gz")
   barcodes_path <- paste0(base_path, sample_name, "-barcodes.tsv.gz")
@@ -69,7 +64,7 @@ smyth_combined <- merge(
 table(smyth_combined@meta.data$sample)
 
 #@@@@@@@@@@@@@@@@@@@@@  Handong_data process
-base_dir <- "/mount/ictr1/chenglab/venu/Manabu_project/scRNAseq/OMIX_data/"
+base_dir <- "Handong_data/OMIX_data/"
 MBC4 <- read.table(paste0(base_dir, "MBC4/matrix_copy.txt"))
 MBC5 <- read.table(paste0(base_dir, "MBC5/matrix_copy.tsv"))
 MBC6 <- read.table(paste0(base_dir, "MBC6/matrix_copy.tsv"), header = TRUE, row.names = 1, sep = "\t", check.names = FALSE)
@@ -92,7 +87,7 @@ View(MBC6_seurat@meta.data)
 
 
 #@@@@@@@@@@@@@@@@@@ Handong_data process
-base_path <- "/mount/ictr1/chenglab/venu/Manabu_project/scRNAseq/OMIX_data"
+base_path <- "scRNAseq/OMIX_data"
 sample_dirs <- c("MBC1", "MBC2", "MBC3", "FBC1", "FBC2")
 
 for (sample_dir in sample_dirs) {
@@ -158,17 +153,17 @@ data$sample_type <- ifelse(
 )
 table(data$sample_type)
 
-file = "/mount/ictr1/chenglab/venu/scRNAseq/MBC_p3/integrate_data.rds"
+file = "integrate_data.rds"
 saveRDS(data, file)
 
-p111<-VlnPlot(data, features =c("RPS4Y1", "XIST"), group.by = "sample_type", raster=FALSE)
-p111
-p222<-FeaturePlot(data, features =c("RPS4Y1", "XIST"), split.by = "sample_type", raster=FALSE)
-p111+p222
+plot_1<-VlnPlot(data, features =c("RPS4Y1", "XIST"), group.by = "sample_type", raster=FALSE)
+plot_2<-FeaturePlot(data, features =c("RPS4Y1", "XIST"), split.by = "sample_type", raster=FALSE)
+# save the plots
 
 
 #@@@@@@@@@@@@@@@@@@@@@# Removing data for Manabu project.
 # Pre-processing, QC and Annotation. 
+file = "integrate_data.rds"
 data<-readRDS(file)
 unique(data$sample)
 xx<-c("GSM4909297_ER-MH0125", "GSM4909303_ER-MH0151", "GSM4909304_ER-MH0163")
@@ -180,6 +175,7 @@ data <- ScaleData(data)
 data <- RunPCA(data, npcs = 100)
 data <- FindNeighbors(data, dims = 1:50) 
 
+# Testing for better resolution
 # library(clustree)
 # resolutions <- seq(0, 1.5, 0.1)
 # n.dims <- 20
@@ -187,10 +183,9 @@ data <- FindNeighbors(data, dims = 1:50)
 #                          dims.use = 1:n.dims, resolution = resolutions)
 # plot1<-clustree(combined)
 # 
-# pdf("/mount/ictr1/chenglab/venu/Manabu_project/scRNAseq/output/Plot_1_Clustertree.pdf", width = 10, height =10)
+# pdf("Plot_1_Clustertree.pdf", width = 10, height =10)
 # print(clustree(combined))
 # dev.off()
-
 
 data <- FindClusters(data)
 data <- RunUMAP(data, dims = 1:30)
@@ -204,30 +199,25 @@ p2<-DimPlot(data, reduction = "umap", split.by = "sample", label = T)
 p3<-DimPlot(data, reduction = "umap", split.by = "sample_type", label = T, raster=FALSE)
 p1+p3
 
-
 cluster_markers <- FindAllMarkers(data, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
-fin_4mks <- c("/mount/ictr1/chenglab/venu/Manabu_project/scRNAseq/output/Hang_smyth_cluster_markers.txt")
+fin_4mks <- c("output/Hang_smyth_cluster_markers.txt")
 write.table(cluster_markers, fin_4mks, sep = "\t", quote = FALSE, row.names = TRUE)
 
 cluster_markers <- read.table(fin_4mks, sep = "\t", header = TRUE, row.names = 1)
 
-source("/mount/ictr1/chenglab/venu/scRNAseq_lung/cellranger_scran/NSCLC_output/source_fxns4seurat.R")
+source("output/source_fxns4seurat.R")  # this function is obtaininf from PMID: 37477508
 library(readxl)
-file_path <- "/mount/ictr1/chenglab/venu/scRNAseq_lung/cellranger_scran/NSCLC_output/CellmarkerDB_Human.xlsx"
+file_path <- "output/CellmarkerDB_Human.xlsx"
 cell_marker_data <- read_excel(file_path)
 head(cell_marker_data)
 unique(cell_marker_data$tissue_class)
-
 breast_cancer <- cell_marker_data %>%
   filter(tissue_class == "Breast" & cancer_type == "Breast Cancer")
-
-head(breast_cancer)
 breast_marker_genes <- breast_cancer[, c("cell_name", "marker")]
 breast_marker_genes<-breast_marker_genes[,c(2,1)]
 colnames(breast_marker_genes)=c("Symbol","cellType")
 unique(breast_marker_genes$cellType)
 breast_marker_genes<-na.omit(breast_marker_genes)
-
 Cell_types<-c("T cell", "B cell","Plasma cell", "Macrophage",  "Monocyte", "Natural killer cell", "Dendritic cell", "Neutrophil",
               "Gamma delta(γδ) T cell","M2 macrophage","M1 macrophage","Mast cell" , "Plasmacytoid dendritic cell(pDC)",
               "Cancer stem cell", "Cytotoxic T cell",                                 
@@ -236,10 +226,8 @@ breast_marker_genes<-breast_marker_genes[breast_marker_genes$cellType %in% Cell_
 
 enrichedData <- enrichScoreCalc_mt(data,
                                    cluster_markers, breast_marker_genes)
-
 nclusters <- nrow(enrichedData$score_Mt)
-Ftab_candidate <- matrix(NA,nclusters,4) # Fisher exact test
-
+Ftab_candidate <- matrix(NA,nclusters,4) 
 for (i in c(1:nclusters)){
   tmpi_hi <- order(enrichedData$score_Mt[i,],decreasing = TRUE)[c(1,2)]
   tmpscore_hi <- enrichedData$score_Mt[i,tmpi_hi]
@@ -258,13 +246,10 @@ gList = c("PTPRC",    #CD45 for immune
           "PECAM1", "CD31", "ACKR1", "GJA5", "PLVAP", "LUM",  # for endothelial
           "EPCAM", "KRT8",    #epithelial marker  
           "CPA3", "KIT")      #MAST
-
-
 # Get (arithmetic) average of markers: non-log scale
 tmp_averages <- AverageExpression(data,
                                   assays="RNA",
                                   features=gList)$RNA
-
 tmp_averages_df <- as.data.frame(tmp_averages)
 tmp_averages_df$Gene = rownames(tmp_averages)
 mks_clust_avg <- tmp_averages_df[, c(ncol(tmp_averages_df), 1:(ncol(tmp_averages_df)-1))]
@@ -279,77 +264,22 @@ Ftab_out$score1 <- as.numeric(Ftab_out$score1)
 Ftab_out$score2 <- as.numeric(Ftab_out$score2)
 Ftab_out$score_diff <- Ftab_out$score1 - Ftab_out$score2
 Ftab_out$cluster_cell<-ifelse(Ftab_out$score_diff >1, Ftab_out$cellType1, Ftab_out$max_col)
-
 Ftab_out$cluster<-as.numeric(sub("g", "", rownames(Ftab_out)))
-
-
-table(Ftab_out$cluster_cell)
-unique(Ftab_out$cluster_cell)
-Ftab_out$cluster_cell1<-ifelse(Ftab_out$cluster_cell %in% "KRT8","Epithelial cell",Ftab_out$cluster_cell)
-Ftab_out$cluster_cell1<-ifelse(Ftab_out$cluster_cell1 %in% "PTPRC" , "CD45_immune",Ftab_out$cluster_cell1)
-Ftab_out$cluster_cell1<-ifelse(Ftab_out$cluster_cell1 %in% "MS4A1", "B cells",Ftab_out$cluster_cell1)
-Ftab_out$cluster_cell1<-ifelse(Ftab_out$cluster_cell1 %in% "COL1A1", "Fibroblast",Ftab_out$cluster_cell1)
-Ftab_out$cluster_cell1<-ifelse(Ftab_out$cluster_cell1 %in% "CPA3", "Mast",Ftab_out$cluster_cell1)
-Ftab_out$cluster_cell1<-ifelse(Ftab_out$cluster_cell1 %in% "CD68", "Macrophage",Ftab_out$cluster_cell1)
-Ftab_out$cluster_cell1<-ifelse(Ftab_out$cluster_cell1 %in% "CD14", "Macrophage",Ftab_out$cluster_cell1)
-Ftab_out$cluster_cell1<-ifelse(Ftab_out$cluster_cell1 %in% "JCHAIN", "Plasma cell",Ftab_out$cluster_cell1)
-Ftab_out$cluster_cell1<-ifelse(Ftab_out$cluster_cell1 %in% "MYLK", "Fibroblast",Ftab_out$cluster_cell1)
-Ftab_out$cluster_cell1<-ifelse(Ftab_out$cluster_cell1 %in% "PECAM1", "Endothelial",Ftab_out$cluster_cell1)
-Ftab_out$cluster_cell1<-ifelse(Ftab_out$cluster_cell1 %in% "M1 macrophage", "Epithelial cell",Ftab_out$cluster_cell1)
-Ftab_out$cluster_cell1<-ifelse(Ftab_out$cluster_cell1 %in% "Cytotoxic T cell", "T cell",Ftab_out$cluster_cell1)
-
-unique(Ftab_out$cluster_cell1)
-
-immune_status <- c(
-  "Epithelial cell"    = "Non-Immune",
-  "Endothelial" ="Non-Immune",
-  "Macrophage"         = "Immune",
-  "T cell"        = "Immune",
-   "CD8"   = "Immune",
-  "CD4"   = "Immune",
-  "Mast cell"          = "Immune",
-  "Fibroblast"         = "Non-Immune",
-  "B cells"            = "Immune",
-# "M1 macrophage"      = "Immune",
-  "Plasma cell"             = "Immune",
-  "Myofibroblasts"     = "Non-Immune",
-  "Stromal cell"       = "Non-Immune",
-  "Mast"               = "Immune"
-)
-
-Ftab_out$immune_status <- immune_status[Ftab_out$cluster_cell1]
-
-out<-"/mount/ictr1/chenglab/venu/Manabu_project/scRNAseq/output/Hang_smyth_Ftab_out.csv"
+# Manuall verification and annotation one by one 
+out<-"output/Hang_smyth_Ftab_out.csv"
 write.csv(Ftab_out, out)
 
 Ftab_out<-read.csv(out)
-
-names(Ftab_out)
-str(Ftab_out)
-View(data@meta.data)
-names(data@meta.data)
-str(data@meta.data)
 data
 DefaultAssay(data)<-"RNA"
 data[["RNA"]] <- JoinLayers(data[["RNA"]])
-
-
-
 seurat_clusters_numeric <- as.numeric(as.character(data@meta.data$seurat_clusters))
 data@meta.data$Cell_type <- Ftab_out$cluster_cell1[match(seurat_clusters_numeric, Ftab_out$cluster)]
 data@meta.data$Cell_type1 <- Ftab_out$immune_status[match(seurat_clusters_numeric, Ftab_out$cluster)]
-table(data@meta.data$Cell_type)
-table(data@meta.data$Cell_type1)
-names(data@meta.data)
-unique(data@meta.data$Cell_type)
 data@meta.data$Cell_type2<-paste0(data@meta.data$Cell_type,"_",data@meta.data$integrated_snn_res.0.8)
-
 p1<-DimPlot(data, reduction = "umap", group.by = "seurat_clusters", label = T,raster = FALSE)+NoLegend()
 p1
-
-CairoPDF("/mount/ictr1/chenglab/venu/Manabu_project/scRNAseq/output/Supplement_1.pdf", width = 6, height =6)
-print(p1)
-dev.off()
+# save the plots
 
 gList = c("PTPRC",    #CD45 for immune
   "CD79A", "MS4A1", "JCHAIN",    #B and plasma
@@ -360,50 +290,29 @@ gList = c("PTPRC",    #CD45 for immune
           "CPA3", "KIT", "TPSD1", #MAST
           "TOP2A", "MKI67", "NUSAP1", # Prolifirating cells
           "CD3D", "CD3E", "CD4", "CD8A", "CD8B", "GZMB",    #Tcells
-          "GZMK","KLRC2", "FOXP3", "CXCL13", "CCR7")      
+          "GZMK","KLRC2", "FOXP3", "CXCL13", "CCR7")    
 
+# save the plots
 p11 <-DotPlot(data, features = gList, group.by = "Cell_type2",dot.scale = 8) + RotatedAxis()
-p1+p11
-
-pdf("/mount/ictr1/chenglab/venu/Manabu_project/scRNAseq/output/Supplement_2.pdf", width = 12, height =7)
-print(p11)
-dev.off()
-
-
 p2<-DimPlot(data, reduction = "umap", group.by = "Cell_type2", label = T,raster = FALSE)+NoLegend()
-p2
-p1+p11+p2
-CairoPDF("/mount/ictr1/chenglab/venu/Manabu_project/scRNAseq/output/Supplement_3.pdf", width = 10, height =10)
-print(p2)
-dev.off()
-
-
 p3<-DimPlot(data, reduction = "umap",group.by = "Cell_type1", label = T,raster = FALSE)+NoLegend()
-p3
-
-CairoPDF("/mount/ictr1/chenglab/venu/Manabu_project/scRNAseq/output/Supplement_4.pdf", width = 6, height =6)
-print(p3)
-dev.off()
 
 
-#@@@@@@@@@ Finally save the data into new output
-saveRDS(data,file=c("/mount/ictr1/chenglab/venu/Manabu_project/scRNAseq/output/Hang_smyth_int_anno_data.rds"))
 
+#@@@@@@@@@ Finally save the data into output
+saveRDS(data,file=c("output/Hang_smyth_int_anno_data.rds"))
 Idents(data) <- data@meta.data$Cell_type1
 Idents(data)
 cd45pos_seurat <- subset(data,idents='Immune')
-saveRDS(cd45pos_seurat,file=c("/mount/ictr1/chenglab/venu/Manabu_project/scRNAseq/output/cd45pos.rds"))
-
+saveRDS(cd45pos_seurat,file=c("output/cd45pos.rds"))
 cd45neg_seurat <- subset(data,idents='Immune',invert=TRUE)
-saveRDS(cd45neg_seurat,file=c("/mount/ictr1/chenglab/venu/Manabu_project/scRNAseq/output/cd45neg.rds"))
-
+saveRDS(cd45neg_seurat,file=c("output/cd45neg.rds"))
 
 #@@@@@@@@@@@@@@@
 rm(list = ls())
-file=c("/mount/ictr1/chenglab/venu/Manabu_project/scRNAseq/output/Hang_smyth_int_anno_data.rds")
+file=c("output/Hang_smyth_int_anno_data.rds")
 data<-readRDS(file)
 data
-
 #@@@@@@@@@@@@@@@@@@@@ 5D and 5E
 unique(data$sample)
 age_data <- data.frame(
@@ -436,18 +345,11 @@ age_data <- data.frame(
   stringsAsFactors = FALSE
 )
 
-med <- 70
+med <- 70 # Collected the age group from the original papers and data
 age_data$Age_Exp <- ifelse(age_data$Age < med, "Low ≤ 70", "High >70")
-
-age_data
-head(data@meta.data)
 data@meta.data$Age <- age_data$Age[match(data@meta.data$sample, age_data$ID)]
 data@meta.data$Age_Exp <- age_data$Age_Exp[match(data@meta.data$sample, age_data$ID)]
-View(data@meta.data)
 
-
-library(dplyr)
-library(ggplot2)
 ube2l3_expr <- FetchData(data, vars = c("UBE2L3", "Cell_type", "Cell_type1", "sample_type", "Age_Exp", "Age"))
 ube2l3_expr <- ube2l3_expr %>% 
   filter(UBE2L3 > 0)
@@ -482,19 +384,9 @@ p1 <- process_and_plot(mbc_immune, "MBC - Immune Cells")
 p2 <- process_and_plot(fbc_immune, "FBC - Immune Cells")
 p3 <- process_and_plot(mbc_nonimmune, "MBC - Non-Immune Cells")
 p4 <- process_and_plot(fbc_nonimmune, "FBC - Non-Immune Cells")
-
+# save the plots
 (p1 | p2) / (p3 | p4)
 
-
-library(Cairo)
-CairoPDF(file = "/mount/ictr1/chenglab/venu/Manabu_project/scRNAseq/output/5D_Plot.pdf", width = 7, height = 4)
-print(p1 | p2)
-dev.off()
-
-CairoPDF(file = "/mount/ictr1/chenglab/venu/Manabu_project/scRNAseq/output/5E_Plot.pdf", width = 7, height = 4)
-print(p3 | p4)
-dev.off()
- 
 
 #@@@@@@@@@@@@@@@@@@ UBE2L3 Expression based on Age wise as Supplement plot. 
 ube2l3_expr <- FetchData(data, vars = c("UBE2L3", "Cell_type", "Cell_type1", "sample_type", "Age_Exp", "Age")) %>%
@@ -530,63 +422,44 @@ p1 <- process_and_plot_by_age(mbc_immune, "MBC - Immune Cells (by Age)")
 p2 <- process_and_plot_by_age(fbc_immune, "FBC - Immune Cells (by Age)")
 p3 <- process_and_plot_by_age(mbc_nonimmune, "MBC - Non-Immune Cells (by Age)")
 p4 <- process_and_plot_by_age(fbc_nonimmune, "FBC - Non-Immune Cells (by Age)")
-
+# save the plots
 (p1 | p2) / (p3 | p4)
 
 
-CairoPDF(file = "/mount/ictr1/chenglab/venu/Manabu_project/scRNAseq/output/Supp_5DE_Plot.pdf", width = 10, height = 7)
-print((p1 | p2) / (p3 | p4))
-dev.off()
 
 
 
-
-
-
-#@@@@@@@@@@@@@@@@@@@@@@@@@ 
-file=c("/mount/ictr1/chenglab/venu/Manabu_project/scRNAseq/output/cd45pos.rds")
+#@@@@@@@@@@@@@@@@@@@@@@@@@ Re-clustering and Re-annotation
+file=c("output/cd45pos.rds")
 cd45pos<-readRDS(file)
 View(cd45pos@meta.data)
 cd45pos@meta.data <- cd45pos@meta.data[, -c(7:11)]
-DimPlot(cd45pos, reduction = "umap")
 DefaultAssay(cd45pos)<-"integrated"
-cd45pos
 table(cd45pos@meta.data$sample, cd45pos@meta.data$sample_type)
-
-
 ndim=50
 cd45pos <- FindNeighbors(cd45pos, dims = 1:ndim)
 cd45pos <- FindClusters(cd45pos)
 cd45pos <- RunUMAP(cd45pos, dims = 1:ndim)
-
 p1<-DimPlot(cd45pos, reduction = "umap", label = T)+NoLegend()
 
 allClust_mks <- FindAllMarkers(cd45pos, only.pos = TRUE, 
                                min.pct = 0.25, logfc.threshold = 0.25)
 
-saveRDS(allClust_mks, file = "/mount/ictr1/chenglab/venu/Manabu_project/scRNAseq/output/Hang_smyth_cd45pos_allClust_mark.rds")
-allClust_mks <- readRDS("/mount/ictr1/chenglab/venu/Manabu_project/scRNAseq/output/Hang_smyth_cd45pos_allClust_mark.rds")
-
-
-
+saveRDS(allClust_mks, file = "output/Hang_smyth_cd45pos_allClust_mark.rds")
+allClust_mks <- readRDS("output/Hang_smyth_cd45pos_allClust_mark.rds")
 
 library(readxl)
-source("/mount/ictr1/chenglab/venu/scRNAseq_lung/cellranger_scran/NSCLC_output/source_fxns4seurat.R")
-file_path <- "/mount/ictr1/chenglab/venu/scRNAseq_lung/cellranger_scran/NSCLC_output/CellmarkerDB_Human.xlsx"
+source("output/source_fxns4seurat.R") # Obtain from the  PMID: 37477508 
+file_path <- "output/CellmarkerDB_Human.xlsx"
 cell_marker_data <- read_excel(file_path)
-head(cell_marker_data)
-unique(cell_marker_data$tissue_class)
 
 breast_cancer <- cell_marker_data %>%
   filter(tissue_class == "Breast" & cancer_type == "Breast Cancer")
-
-head(breast_cancer)
 
 breast_marker_genes <- breast_cancer %>%
   select(cell_name, Symbol)
 breast_marker_genes<-breast_marker_genes[,c(2,1)]
 colnames(breast_marker_genes)=c("Symbol","cellType")
-unique(breast_marker_genes$cellType)
 breast_marker_genes<-na.omit(breast_marker_genes)
 
 Cell_types<-c("T cell", "B cell","Plasma cell", "Macrophage",  "Monocyte", "Natural killer cell", "Dendritic cell", "Neutrophil",
@@ -594,7 +467,6 @@ Cell_types<-c("T cell", "B cell","Plasma cell", "Macrophage",  "Monocyte", "Natu
               "Cytotoxic T cell")
 
 breast_marker_genes<-breast_marker_genes[breast_marker_genes$cellType %in% Cell_types,]
-
 
 immune_types <- c(
   "Cytotoxic T cell", "B cell", "T cell", "Tumor‐associated macrophage (TAM)",
@@ -611,8 +483,6 @@ immune_types <- c(
   "T helper(Th) cell"
 )
 breast_marker_genes<-breast_marker_genes[breast_marker_genes$cellType %in% immune_types,]
-
-
 
 enrichedData <- enrichScoreCalc_mt(cd45pos,
                                    allClust_mks,breast_marker_genes)
@@ -681,32 +551,11 @@ Ftab_out$expressed_genes <- apply(Ftab_out[, gene_columns], 1, function(row) {
 head(Ftab_out$expressed_genes)
 
 #@@@@@@@@@@@@
-# Manually inspect and assign cell type
+# Manually inspect and assign cell type as discribed here PMID: 37477508
 str(Ftab_out)
 Ftab_out$cluster <- gsub("^g", "", Ftab_out$cluster)
-Ftab_out$Cell_Type <- NA  
-
-cell_map <- c(
-  "0" = "CD8Exh_cells",
-  "1" = "Naive_CD4_cell",
-  "2" = "Mac",
-  "3" = "CD8_cells",
-  "4" = "Mac",
-  "5" = "Mac",
-  "6" = "CD4_cell",
-  "7" = "Neutrophils",
-  "8" = "Naive_B_cells",
-  "9" = "Plasma_cells",
-  "10" = "Prolif_Mac",
-  "11" = "MAST",
-  "12" = "DC",
-  "13" = "MAST"
-)
-
-Ftab_out$Cell_Type <- cell_map[Ftab_out$cluster]
-Ftab_out$cluster<-as.numeric(Ftab_out$cluster)
-
-fout =c("/mount/ictr1/chenglab/venu/Manabu_project/scRNAseq/output/cd45pos_Ftab_out.txt")
+Ftab_out$Cell_Type <- NA  # add cell naems 
+fout =c("output/cd45pos_Ftab_out.txt")
 write.table(Ftab_out, fout, sep="\t",
             quote = F, row.names = F)
 
@@ -727,21 +576,21 @@ table(cd45pos@meta.data$Cell_type, cd45pos@meta.data$sample_type)
 cd45pos@meta.data$Cell_type1 <- paste0( cd45pos@meta.data$Cell_type,"_","C",cd45pos@meta.data$integrated_snn_res.0.8)
 unique(cd45pos$sample)
 
-file=c("/mount/ictr1/chenglab/venu/Manabu_project/scRNAseq/output/cd45pos_breast_annotated.rds")
+file=c("output/cd45pos_breast_annotated.rds")
 saveRDS(cd45pos,file)
 
 cd45pos<-readRDS(file)
-#+++++++++++ Plot-2 UMAP
+#+++++++++++ 5A_umap_MBC_FBC.pdf
 p1<-DimPlot(cd45pos, group.by = 'Cell_type', label = TRUE, label.size = 6, repel = T)
 p1
 p2<-DimPlot(cd45pos, reduction = "umap", group.by = 'Cell_type',split.by = "sample_type", label = TRUE, label.size = 6, repel = T)
 p2+p1
-pdf("/mount/ictr1/chenglab/venu/Manabu_project/scRNAseq/output/5A_umap_MBC_FBC.pdf", width = 15, height =7)
+pdf("output/5A_umap_MBC_FBC.pdf", width = 15, height =7)
 print(p2)
 dev.off()
 
 
-#+++++++++++ Plot-5 Dot Plots
+#+++++++++++ 
 gList = c("CD3D","CD4","LTB","IL7R",  ##CD4 
           "CD8A","CD8B","GZMB","GZMA","PRF1", #CD8, NK
           "CD79A", "CD38", "TNFRSF17", "MZB1", "JCHAIN",       #Plasma
@@ -760,19 +609,18 @@ gList = c("CD3D","CD4","LTB","IL7R",  ##CD4
 plot_dot<-DotPlot(cd45pos, features = gList, group.by = "Cell_type")+ 
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 plot_dot
-pdf("/mount/ictr1/chenglab/venu/Manabu_project/scRNAseq/output/5Supp_Dot_Plot.pdf", width = 10, height =5)
+pdf("output/5Supp_Dot_Plot.pdf", width = 10, height =5)
 print(plot_dot)
 dev.off()
 #@@@@@@@@@@@@@@@@@@@@@@
 
 
 #@@@@@@@@@@@@@@@@@@@ 5A_Umap sample_type
-file=c("/mount/ictr1/chenglab/venu/Manabu_project/scRNAseq/output/cd45pos_breast_annotated.rds")
+file=c("output/cd45pos_breast_annotated.rds")
 data<-readRDS(file)
-
 p2<-DimPlot(data, reduction = "umap", group.by = "Cell_type", split.by = "sample_type", label = T,raster = FALSE)+NoLegend()
 p2
-CairoPDF("/mount/ictr1/chenglab/venu/Manabu_project/scRNAseq/output/5A_umap_MBC_FBC.pdf", width = 12, height =5)
+CairoPDF("output/5A_umap_MBC_FBC.pdf", width = 12, height =5)
 print(p2)
 dev.off()
 
@@ -801,7 +649,7 @@ plot_bar <- ggplot(prop_df, aes(x = CellType, y = Proportion, fill = Group)) +
 
 plot_bar
 
-pdf("/mount/ictr1/chenglab/venu/Manabu_project/scRNAseq/output/5B_propotions.pdf", width = 8, height =5)
+pdf("output/5B_propotions.pdf", width = 8, height =5)
 print(plot_bar)
 dev.off()
 
@@ -832,90 +680,6 @@ p2 <- p2 + stat_compare_means(
 
 p2
 
-pdf("/mount/ictr1/chenglab/venu/Manabu_project/scRNAseq/output/5C_box.pdf", width = 15, height =4)
+pdf("output/5C_box.pdf", width = 15, height =4)
 print(p2)
 dev.off()
-
-h
-
-
-
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
-
-
-
-
